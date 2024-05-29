@@ -1,3 +1,174 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  ...
+  ScrapeNewsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/scrape_news
+      RetentionInDays: 14
+
+  GenerateArticleLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/generate_article
+      RetentionInDays: 14
+
+  ParaphraseArticleLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/paraphrase_article
+      RetentionInDays: 14
+
+  NotifyEditorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/notify_editor
+      RetentionInDays: 14
+
+  OptimizeSeoLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/optimize_seo
+      RetentionInDays: 14
+
+  PublishArticleLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/publish_article
+      RetentionInDays: 14
+
+  PostToSocialMediaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/post_to_social_media
+      RetentionInDays: 14
+
+  LambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: LambdaErrorAlarm
+      AlarmDescription: "Alarm for Lambda function errors"
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: scrape_news
+        - Name: FunctionName
+          Value: generate_article
+        - Name: FunctionName
+          Value: paraphrase_article
+        - Name: FunctionName
+          Value: notify_editor
+        - Name: FunctionName
+          Value: optimize_seo
+        - Name: FunctionName
+          Value: publish_article
+        - Name: FunctionName
+          Value: post_to_social_media
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref SNSAlarmTopic
+      OKActions:
+        - !Ref SNSAlarmTopic
+
+  LambdaDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: LambdaDurationAlarm
+      AlarmDescription: "Alarm for Lambda function duration"
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: scrape_news
+        - Name: FunctionName
+          Value: generate_article
+        - Name: FunctionName
+          Value: paraphrase_article
+        - Name: FunctionName
+          Value: notify_editor
+        - Name: FunctionName
+          Value: optimize_seo
+        - Name: FunctionName
+          Value: publish_article
+        - Name: FunctionName
+          Value: post_to_social_media
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref SNSAlarmTopic
+      OKActions:
+        - !Ref SNSAlarmTopic
+
+  SNSAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: LambdaAlarmsTopic
+
+  CloudWatchLogsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CloudWatchLogsPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:log-group:/aws/lambda/*
+      Roles:
+        - !Ref LambdaExecutionRole
+
+  CloudWatchAlarmsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CloudWatchAlarmsPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudwatch:PutMetricAlarm
+              - cloudwatch:DeleteAlarms
+              - sns:Publish
+            Resource: '*'
+      Roles:
+        - !Ref LambdaExecutionRole
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - ses:SendEmail
+                  - sns:Publish
+                Resource: '*'
+      Path: /
