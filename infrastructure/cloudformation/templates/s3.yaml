@@ -1,3 +1,82 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  ...
+  ParaphrasedArticlesBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'paraphrased-articles-bucket'
+      VersioningConfiguration:
+        Status: 'Enabled'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref ParaphrasedArticlesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              AWS: '*'
+            Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Resource: !Sub '${ParaphrasedArticlesBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                aws:PrincipalAccount: !Ref 'AWS::AccountId'
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'LambdaS3AccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource:
+                  - !Sub '${ParaphrasedArticlesBucket.Arn}'
+                  - !Sub '${ParaphrasedArticlesBucket.Arn}/*'
+
+  LambdaExecutionPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: 'LambdaExecutionPolicy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: 'arn:aws:logs:*:*:*'
+      Roles:
+        - !Ref LambdaExecutionRole
+
+Outputs:
+  BucketName:
+    Description: 'Name of the S3 bucket'
+    Value: !Ref ParaphrasedArticlesBucket
+  BucketArn:
+    Description: 'ARN of the S3 bucket'
+    Value: !GetAtt ParaphrasedArticlesBucket.Arn
+  LambdaRole:
+    Description: 'IAM Role for Lambda functions'
+    Value: !Ref LambdaExecutionRole
