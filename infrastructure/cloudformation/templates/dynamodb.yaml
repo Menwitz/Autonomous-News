@@ -1,3 +1,81 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  ...
+  NewsHeadlinesTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: 'NewsHeadlines'
+      AttributeDefinitions:
+        - AttributeName: 'url'
+          AttributeType: 'S'
+        - AttributeName: 'timestamp'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'url'
+          KeyType: 'HASH'
+        - AttributeName: 'timestamp'
+          KeyType: 'RANGE'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: 'Environment'
+          Value: 'Production'
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'DynamoDBAccessPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'dynamodb:BatchGetItem'
+                  - 'dynamodb:BatchWriteItem'
+                  - 'dynamodb:DeleteItem'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:Query'
+                  - 'dynamodb:Scan'
+                  - 'dynamodb:UpdateItem'
+                Resource: !GetAtt 
+                  - NewsHeadlinesTable.Arn
+  LambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: 'index.handler'
+      Role: !GetAtt 
+        - LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: 'your-bucket-name'
+        S3Key: 'your-lambda-code.zip'
+      Runtime: 'python3.8'
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref NewsHeadlinesTable
+
+Outputs:
+  TableName:
+    Description: 'DynamoDB Table Name'
+    Value: !Ref NewsHeadlinesTable
+  TableArn:
+    Description: 'DynamoDB Table ARN'
+    Value: !GetAtt 
+      - NewsHeadlinesTable.Arn
+  LambdaExecutionRoleArn:
+    Description: 'IAM Role ARN for Lambda Execution'
+    Value: !GetAtt 
+      - LambdaExecutionRole.Arn
+  LambdaFunctionArn:
+    Description: 'Lambda Function ARN'
+    Value: !GetAtt 
+      - LambdaFunction.Arn
