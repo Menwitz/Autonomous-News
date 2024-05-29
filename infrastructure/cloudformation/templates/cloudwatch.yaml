@@ -4,15 +4,105 @@ Resources:
     Type: AWS::Lambda::Function
     Properties: 
       FunctionName: scrape_news
-      Handler: index.handler
+      Handler: scrape_news.lambda_handler
       Runtime: python3.8
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
       Code:
-        S3Bucket: your-s3-bucket
-        S3Key: path/to/your/code.zip
+        S3Bucket: your-lambda-code-bucket
+        S3Key: scrape_news.zip
       Environment:
         Variables:
           ENV_VAR_EXAMPLE: value
+
+  GenerateArticleFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: generate_article
+      Handler: generate_article.lambda_handler
+      Runtime: python3.8
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+      Code:
+        S3Bucket: your-lambda-code-bucket
+        S3Key: generate_article.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  ParaphraseArticleFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: paraphrase_article
+      Handler: paraphrase_article.lambda_handler
+      Runtime: python3.8
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+      Code:
+        S3Bucket: your-lambda-code-bucket
+        S3Key: paraphrase_article.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  NotifyEditorFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: notify_editor
+      Handler: notify_editor.lambda_handler
+      Runtime: python3.8
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+      Code:
+        S3Bucket: your-lambda-code-bucket
+        S3Key: notify_editor.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  OptimizeSeoFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: optimize_seo
+      Handler: optimize_seo.lambda_handler
+      Runtime: python3.8
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+      Code:
+        S3Bucket: your-lambda-code-bucket
+        S3Key: optimize_seo.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  PublishArticleFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: publish_article
+      Handler: publish_article.lambda_handler
+      Runtime: python3.8
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+      Code:
+        S3Bucket: your-lambda-code-bucket
+        S3Key: publish_article.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  PostToSocialMediaFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: post_to_social_media
+      Handler: post_to_social_media.lambda_handler
+      Runtime: python3.8
+      Role: arn:aws:iam::your-account-id:role/your-lambda-role
+      Code:
+        S3Bucket: your-lambda-code-bucket
+        S3Key: post_to_social_media.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  ScrapeNewsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/scrape_news
+      RetentionInDays: 14
 
   GenerateArticleLogGroup:
     Type: AWS::Logs::LogGroup
@@ -191,7 +281,7 @@ Resources:
         - Arn: !GetAtt ScrapeNewsFunction.Arn
           Id: ScrapeNewsFunctionTarget
 
-  PermissionForEventsToInvokeLambda:
+  PermissionForEventsToInvokeScrapeNews:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref ScrapeNewsFunction
@@ -199,3 +289,182 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt ScrapeNewsEventRule.Arn
 
+  GenerateArticleEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: GenerateArticleRule
+      EventPattern:
+        source:
+          - "aws.lambda"
+        detail-type:
+          - "AWS API Call via CloudTrail"
+        detail:
+          eventSource:
+            - "lambda.amazonaws.com"
+          eventName:
+            - "Invoke"
+          requestParameters:
+            functionName:
+              - !Ref ScrapeNewsFunction
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt GenerateArticleFunction.Arn
+          Id: GenerateArticleFunctionTarget
+
+  PermissionForEventsToInvokeGenerateArticle:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GenerateArticleFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt GenerateArticleEventRule.Arn
+
+  ParaphraseArticleEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: ParaphraseArticleRule
+      EventPattern:
+        source:
+          - "aws.lambda"
+        detail-type:
+          - "AWS API Call via CloudTrail"
+        detail:
+          eventSource:
+            - "lambda.amazonaws.com"
+          eventName:
+            - "Invoke"
+          requestParameters:
+            functionName:
+              - !Ref GenerateArticleFunction
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ParaphraseArticleFunction.Arn
+          Id: ParaphraseArticleFunctionTarget
+
+  PermissionForEventsToInvokeParaphraseArticle:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ParaphraseArticleFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ParaphraseArticleEventRule.Arn
+
+  NotifyEditorEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: NotifyEditorRule
+      EventPattern:
+        source:
+          - "aws.lambda"
+        detail-type:
+          - "AWS API Call via CloudTrail"
+        detail:
+          eventSource:
+            - "lambda.amazonaws.com"
+          eventName:
+            - "Invoke"
+          requestParameters:
+            functionName:
+              - !Ref ParaphraseArticleFunction
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt NotifyEditorFunction.Arn
+          Id: NotifyEditorFunctionTarget
+
+  PermissionForEventsToInvokeNotifyEditor:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref NotifyEditorFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt NotifyEditorEventRule.Arn
+
+  OptimizeSeoEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: OptimizeSeoRule
+      EventPattern:
+        source:
+          - "aws.lambda"
+        detail-type:
+          - "AWS API Call via CloudTrail"
+        detail:
+          eventSource:
+            - "lambda.amazonaws.com"
+          eventName:
+            - "Invoke"
+          requestParameters:
+            functionName:
+              - !Ref NotifyEditorFunction
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt OptimizeSeoFunction.Arn
+          Id: OptimizeSeoFunctionTarget
+
+  PermissionForEventsToInvokeOptimizeSeo:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref OptimizeSeoFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OptimizeSeoEventRule.Arn
+
+  PublishArticleEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: PublishArticleRule
+      EventPattern:
+        source:
+          - "aws.lambda"
+        detail-type:
+          - "AWS API Call via CloudTrail"
+        detail:
+          eventSource:
+            - "lambda.amazonaws.com"
+          eventName:
+            - "Invoke"
+          requestParameters:
+            functionName:
+              - !Ref OptimizeSeoFunction
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt PublishArticleFunction.Arn
+          Id: PublishArticleFunctionTarget
+
+  PermissionForEventsToInvokePublishArticle:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PublishArticleFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt PublishArticleEventRule.Arn
+
+  PostToSocialMediaEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: PostToSocialMediaRule
+      EventPattern:
+        source:
+          - "aws.lambda"
+        detail-type:
+          - "AWS API Call via CloudTrail"
+        detail:
+          eventSource:
+            - "lambda.amazonaws.com"
+          eventName:
+            - "Invoke"
+          requestParameters:
+            functionName:
+              - !Ref PublishArticleFunction
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt PostToSocialMediaFunction.Arn
+          Id: PostToSocialMediaFunctionTarget
+
+  PermissionForEventsToInvokePostToSocialMedia:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PostToSocialMediaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt PostToSocialMediaEventRule.Arn
