@@ -1,3 +1,63 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Description: Configure Amazon SES with email address verification, SNS topic, and IAM policies.
+
 Resources:
-  ...
+  VerifySenderEmail:
+    Type: "AWS::SES::EmailIdentity"
+    Properties:
+      EmailIdentity: "sender@example.com"  # Replace with the sender's email address
+
+  VerifyRecipientEmail:
+    Type: "AWS::SES::EmailIdentity"
+    Properties:
+      EmailIdentity: "recipient@example.com"  # Replace with the recipient's email address
+
+  EmailNotificationsTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: "EmailNotifications"
+
+  SubscribeRecipientToTopic:
+    Type: "AWS::SNS::Subscription"
+    Properties:
+      Endpoint: "recipient@example.com"  # Replace with the recipient's email address
+      Protocol: "email"
+      TopicArn: !Ref EmailNotificationsTopic
+
+  SesPublishPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "SesPublishToSnsPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "sns:Publish"
+            Resource: !Ref EmailNotificationsTopic
+      Roles:
+        - Ref: SesPublishRole
+
+  SesPublishRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ses.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Path: "/"
+
+Outputs:
+  SenderEmailVerification:
+    Description: "SES sender email verification."
+    Value: !Ref VerifySenderEmail
+
+  RecipientEmailVerification:
+    Description: "SES recipient email verification."
+    Value: !Ref VerifyRecipientEmail
+
+  SNSTopic:
+    Description: "SNS Topic for email notifications."
+    Value: !Ref EmailNotificationsTopic
