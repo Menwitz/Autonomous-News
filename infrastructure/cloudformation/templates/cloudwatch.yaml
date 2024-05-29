@@ -1,10 +1,18 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  ScrapeNewsLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: /aws/lambda/scrape_news
-      RetentionInDays: 14
+  ScrapeNewsFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: scrape_news
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
 
   GenerateArticleLogGroup:
     Type: AWS::Logs::LogGroup
@@ -172,3 +180,22 @@ Resources:
                   - sns:Publish
                 Resource: '*'
       Path: /
+
+  ScrapeNewsEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: ScrapeNewsScheduleRule
+      ScheduleExpression: rate(12 hours)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ScrapeNewsFunction.Arn
+          Id: ScrapeNewsFunctionTarget
+
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ScrapeNewsFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ScrapeNewsEventRule.Arn
+
