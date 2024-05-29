@@ -1,3 +1,129 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  ...
+  ScrapeNewsFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: scrape_news
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  GenerateArticleFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: generate_article
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  ParaphraseArticleFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: paraphrase_article
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  NotifyEditorFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: notify_editor
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  OptimizeSeoFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: optimize_seo
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  PublishArticleFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: publish_article
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  PostToSocialMediaFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: post_to_social_media
+      Handler: index.handler
+      Runtime: python3.8
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: your-s3-bucket
+        S3Key: path/to/your/code.zip
+      Environment:
+        Variables:
+          ENV_VAR_EXAMPLE: value
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - ses:SendEmail
+                  - sns:Publish
+                Resource: '*'
+      Path: /
