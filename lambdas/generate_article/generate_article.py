@@ -52,10 +52,34 @@ def retrieve_headlines() -> List[Dict[str, str]]:
 
 def generate_article(headline: str) -> str:
     try:
+        instructions = {
+            "model": "gpt-4-turbo",
+            "instructions": {
+                "headline": headline,
+                "length": "1000 words",
+                "mood": "informative",
+                "style": "professional",
+                "additional_requirements": "Include relevant data and quotes"
+            }
+        }
+
+        prompt = (
+            f"Using the following instructions, generate a detailed article:\n\n"
+            f"Headline: {instructions['instructions']['headline']}\n"
+            f"Length: {instructions['instructions']['length']}\n"
+            f"Mood: {instructions['instructions']['mood']}\n"
+            f"Style: {instructions['instructions']['style']}\n"
+            f"Additional Requirements: {instructions['instructions']['additional_requirements']}\n"
+            f"Article:"
+        )
+
         response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=f"Write a detailed article based on the following headline: {headline}",
-            max_tokens=500
+            model="gpt-4-turbo",
+            prompt=prompt,
+            max_tokens=1500,
+            temperature=0.7,
+            n=1,
+            stop=None
         )
         return response.choices[0].text.strip()
     except Exception as e:
