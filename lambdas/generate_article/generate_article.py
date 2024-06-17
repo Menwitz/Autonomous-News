@@ -4,9 +4,10 @@ import os
 import openai
 from datetime import datetime
 from botocore.exceptions import ClientError
-from typing import List, Dict
+from typing import List, Dict, Any
 import logging
 from dotenv import load_dotenv
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +25,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 def lambda_handler(event: dict, context: dict) -> dict:
+    """
+    AWS Lambda handler function.
+    
+    Args:
+        event (dict): Event data
+        context (dict): Context data
+    
+    Returns:
+        dict: HTTP response with status code and message
+    """
     try:
         headlines = retrieve_headlines()
         for headline in headlines:
@@ -43,14 +54,43 @@ def lambda_handler(event: dict, context: dict) -> dict:
         }
 
 def retrieve_headlines() -> List[Dict[str, str]]:
+    """
+    Retrieve headlines from the NewsHeadlines DynamoDB table.
+    
+    Returns:
+        List[Dict[str, str]]: List of headlines
+    
+    Raises:
+        RuntimeError: If there is an error retrieving headlines
+    """
     try:
         response = headlines_table.scan()
-        return response.get('Items', [])
+        items = response.get('Items', [])
+        
+        # Handle pagination if needed
+        while 'LastEvaluatedKey' in response:
+            response = headlines_table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+            items.extend(response.get('Items', []))
+        
+        return items
     except ClientError as e:
         logger.error(f'Error retrieving headlines: {e.response["Error"]["Message"]}')
         raise RuntimeError(f'Error retrieving headlines: {e.response["Error"]["Message"]}')
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def generate_article(headline: str) -> str:
+    """
+    Generate a detailed article using OpenAI API based on the headline.
+    
+    Args:
+        headline (str): The headline to base the article on
+    
+    Returns:
+        str: The generated article
+    
+    Raises:
+        RuntimeError: If there is an error generating the article
+    """
     try:
         instructions = {
             "model": "gpt-4-turbo",
@@ -86,7 +126,18 @@ def generate_article(headline: str) -> str:
         logger.error(f'Error generating article: {str(e)}')
         raise RuntimeError(f'Error generating article: {str(e)}')
 
-def store_article(table, headline: str, article: str) -> None:
+def store_article(table: Any, headline: str, article: str) -> None:
+    """
+    Store the generated article in the GeneratedArticles DynamoDB table.
+    
+    Args:
+        table (Any): The DynamoDB table object
+        headline (str): The headline of the article
+        article (str): The generated article
+    
+    Raises:
+        RuntimeError: If there is an error storing the article
+    """
     try:
         timestamp = datetime.utcnow().isoformat()
         url = f"https://example.com/{headline.replace(' ', '-').lower()}"
