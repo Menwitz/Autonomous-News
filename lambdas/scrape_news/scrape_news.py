@@ -10,11 +10,17 @@ from botocore.config import Config
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('NewsHeadlines')
 
-# List of news websites
 news_websites = [
-    "https://example1.com",
-    "https://example2.com",
-    # Add all 100 news websites here
+    "https://www.sbnation.com/",
+    "https://goal.com",
+    "https://bleacherreport.com/",
+    "https://www.espn.com/",
+    "https://sports.yahoo.com/",
+    "https://www.reuters.com/sports/",
+    "https://www.foxsports.com/",
+    "https://www.skysports.com/",
+    "https://www.yardbarker.com/",
+    "https://www.nbcsports.com/"
 ]
 
 def fetch_headlines(url):
@@ -22,8 +28,29 @@ def fetch_headlines(url):
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
-        # This part may need customization for each site
-        headlines = soup.find_all('h1')  # Example: Change based on the site's structure
+        if "sbnation.com" in url:
+            headlines = soup.select('h2.c-entry-box--compact__title')
+        elif "goal.com" in url:
+            headlines = soup.select('h3.article-title')
+        elif "bleacherreport.com" in url:
+            headlines = soup.select('h3.atom-headline')
+        elif "espn.com" in url:
+            headlines = soup.select('h1.headline')
+        elif "sports.yahoo.com" in url:
+            headlines = soup.select('h3')
+        elif "reuters.com" in url:
+            headlines = soup.select('h3.story-title')
+        elif "foxsports.com" in url:
+            headlines = soup.select('h1.headline')
+        elif "skysports.com" in url:
+            headlines = soup.select('h1.news-list__headline')
+        elif "yardbarker.com" in url:
+            headlines = soup.select('h3')
+        elif "nbcsports.com" in url:
+            headlines = soup.select('h2.tease-card__headline')
+        else:
+            print(f"No specific parser for {url}")
+            return []
         return [headline.get_text(strip=True) for headline in headlines]
     except requests.RequestException as e:
         print(f"Error fetching {url}: {e}")
