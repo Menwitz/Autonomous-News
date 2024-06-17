@@ -26,7 +26,9 @@ news_websites = {
 
 def fetch_headlines(url, selector):
     try:
-        response = requests.get(url, timeout=10)
+        # Setting headers and disabling SSL verification for specific site if necessary
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, timeout=10, verify=False if "nbc" in url else True, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         headlines = soup.select(selector)
