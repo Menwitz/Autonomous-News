@@ -5,52 +5,31 @@ import boto3
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from botocore.config import Config
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Initialize DynamoDB resource
-dynamodb = boto3.resource('dynamodb')
+dynamodb = boto3.resource('dynamodb', config=Config(retries={'max_attempts': 10, 'mode': 'standard'}))
 table = dynamodb.Table('NewsHeadlines')
 
-news_websites = [
-    "https://www.sbnation.com/",
-    "https://goal.com",
-    "https://bleacherreport.com/",
-    "https://www.espn.com/",
-    "https://sports.yahoo.com/",
-    "https://www.reuters.com/sports/",
-    "https://www.foxsports.com/",
-    "https://www.skysports.com/",
-    "https://www.yardbarker.com/",
-    "https://www.nbcsports.com/"
-]
+news_websites = {
+    "https://www.sbnation.com/": 'h2.c-entry-box--compact__title',
+    "https://goal.com": 'h3.article-title',
+    "https://bleacherreport.com/": 'h3.atom-headline',
+    "https://www.espn.com/": 'h1.headline',
+    "https://sports.yahoo.com/": 'h3',
+    "https://www.reuters.com/sports/": 'h3.story-title',
+    "https://www.foxsports.com/": 'h1.headline',
+    "https://www.skysports.com/": 'h1.news-list__headline',
+    "https://www.yardbarker.com/": 'h3',
+    "https://www.nbcsports.com/": 'h2.tease-card__headline'
+}
 
-def fetch_headlines(url):
+def fetch_headlines(url, selector):
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
-        if "sbnation.com" in url:
-            headlines = soup.select('h2.c-entry-box--compact__title')
-        elif "goal.com" in url:
-            headlines = soup.select('h3.article-title')
-        elif "bleacherreport.com" in url:
-            headlines = soup.select('h3.atom-headline')
-        elif "espn.com" in url:
-            headlines = soup.select('h1.headline')
-        elif "sports.yahoo.com" in url:
-            headlines = soup.select('h3')
-        elif "reuters.com" in url:
-            headlines = soup.select('h3.story-title')
-        elif "foxsports.com" in url:
-            headlines = soup.select('h1.headline')
-        elif "skysports.com" in url:
-            headlines = soup.select('h1.news-list__headline')
-        elif "yardbarker.com" in url:
-            headlines = soup.select('h3')
-        elif "nbcsports.com" in url:
-            headlines = soup.select('h2.tease-card__headline')
-        else:
-            print(f"No specific parser for {url}")
-            return []
+        headlines = soup.select(selector)
         return [headline.get_text(strip=True) for headline in headlines]
     except requests.RequestException as e:
         print(f"Error fetching {url}: {e}")
@@ -71,10 +50,17 @@ def store_headline(url, headline):
         print(f"Error storing headline: {e}")
 
 def scrape_news(event, context):
-    for url in news_websites:
-        headlines = fetch_headlines(url)
-        for headline in headlines:
-            store_headline(url, headline)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(fetch_headlines, url, selector): url for url, selector in news_websites.items()}
+        for future in as_completed(futures):
+            url = futures[future]
+            try:
+                headlines = future.result()
+                for headline in headlines:
+                    store_headline(url, headline)
+            except Exception as e:
+                print(f"Error processing {url}: {e}")
+
     return {
         'statusCode': 200,
         'body': json.dumps('Headlines scraped successfully')
