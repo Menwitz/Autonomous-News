@@ -21,31 +21,47 @@ WORDPRESS_PASSWORD = 'your-wordpress-password'
 
 def publish_article(event, context):
     # Extract article URI from the event
-    try:
-        article_uri = event['Records'][0]['s3']['object']['key']
-        logger.info(f'Retrieved article URI: {article_uri}')
-    except KeyError as e:
-        logger.error(f'Error retrieving article URI: {e}')
+    article_uri = extract_article_uri(event)
+    if not article_uri:
         return
 
     # Retrieve article content from S3
+    article_content = get_article_content_from_s3(article_uri)
+    if not article_content:
+        update_dynamodb_status(article_uri, 'FAILED')
+        return
+
+    # Publish the article to WordPress
+    if publish_to_wordpress(article_content):
+        update_dynamodb_status(article_uri, 'PUBLISHED')
+    else:
+        update_dynamodb_status(article_uri, 'FAILED')
+
+def extract_article_uri(event):
+    try:
+        article_uri = event['Records'][0]['s3']['object']['key']
+        logger.info(f'Retrieved article URI: {article_uri}')
+        return article_uri
+    except KeyError as e:
+        logger.error(f'Error retrieving article URI: {e}')
+        return None
+
+def get_article_content_from_s3(article_uri):
     try:
         response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=article_uri)
         article_content = response['Body'].read().decode('utf-8')
         logger.info('Article content retrieved successfully')
+        return article_content
     except ClientError as e:
         logger.error(f'Error retrieving article from S3: {e}')
-        update_dynamodb_status(article_uri, 'FAILED')
-        return
+        return None
 
-    # Prepare the WordPress post data
+def publish_to_wordpress(article_content):
     post_data = {
         'title': 'Your Article Title',
         'content': article_content,
         'status': 'publish'
     }
-
-    # Publish the article to WordPress
     try:
         response = requests.post(
             WORDPRESS_API_URL,
@@ -54,11 +70,10 @@ def publish_article(event, context):
         )
         response.raise_for_status()
         logger.info('Article published successfully')
-        update_dynamodb_status(article_uri, 'PUBLISHED')
+        return True
     except requests.exceptions.RequestException as e:
         logger.error(f'Error publishing article to WordPress: {e}')
-        update_dynamodb_status(article_uri, 'FAILED')
-        return
+        return False
 
 def update_dynamodb_status(article_uri, status):
     try:
@@ -75,15 +90,4 @@ def update_dynamodb_status(article_uri, status):
 if __name__ == '__main__':
     # Sample event for local testing
     event = {
-        'Records': [
-            {
-                's3': {
-                    'object': {
-                        'key': 'path/to/your/article.txt'
-                    }
-                }
-            }
-        ]
-    }
-    context = {}
-    publish_article(event, context)
+        'Records
