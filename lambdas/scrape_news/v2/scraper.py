@@ -6,6 +6,13 @@ from config import table, timeout, logger
 # Request session with retry logic
 session = requests.Session()
 headers = {'User-Agent': 'Mozilla/5.0'}
+# Set headers with a user-agent to mimic a web browser
+#headers = {
+#    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+#}
+#response = requests.get(url, headers=headers)
+
+
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
@@ -36,11 +43,22 @@ def fetch_headlines(url, selector):
         log_error(f"Invalid URL: {url}")
         return []
     try:
-        response = session.get(url, timeout=timeout, verify=False if "nbc" in url else True, headers=headers)
+        response = session.get(url, timeout=timeout, verify=True if "nbc" in url else True, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
+        #print(soup)
         headlines = soup.select(selector)
-        return [headline.get_text(strip=True) for headline in headlines]
+        # Extract headline and URL with conditional text fallback
+        result = [
+            {
+                'headline': headline.get_text(strip=True) if headline.get_text(strip=True) else headline.get('aria-label', '').strip(),
+                'url': headline.get('href', '')
+            } 
+        for headline in headlines
+        ]
+        return result
+    
+
     except requests.Timeout:
         log_error(f"Timeout error fetching {url}")
     except requests.ConnectionError:

@@ -138,7 +138,7 @@ def scrape_news(event, context):
             try:
                 headlines = future.result()
                 for headline in headlines:
-                    headlines_data.append({'url': url, 'headline': headline, 'timestamp': datetime.utcnow().isoformat()})
+                    headlines_data.append({'url': url, 'headline': headline, 'timestamp': datetime.now(datetime.UTC).isoformat()})
             except Exception as e:
                 log_error(f"Error processing {url}: {e}")
     batch_store_headlines(headlines_data)
