@@ -1,2 +1,4 @@
 boto3
 requests
+selenium
+chromedriver-py
